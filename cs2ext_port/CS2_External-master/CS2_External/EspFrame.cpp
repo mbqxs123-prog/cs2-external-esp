@@ -323,6 +323,23 @@ static void DrawGrenades(CView& view, const Vec3& localPos)
             }
         }
 
+        // in-flight marker: always draw a centre dot + velocity tick, even when
+        // the frame has no radius for this projectile (r == 0 meant "nothing at
+        // all" before, which looked like the ESP had missed it).
+        if (!fire)
+        {
+            Gui.CircleFilled({ s.x, s.y }, 3.f, col, 8);
+            Gui.Circle({ s.x, s.y }, 7.f, col, 1.2f, 16);
+
+            Vec3 tip = g.pos;
+            tip.x += g.vel.x * 0.15f;
+            tip.y += g.vel.y * 0.15f;
+            tip.z += g.vel.z * 0.15f;
+            Vec2 t2;
+            if (view.WorldToScreen(tip, t2))
+                Gui.Line({ s.x, s.y }, { t2.x, t2.y }, col, 1.4f);
+        }
+
         // history: throw point -> current position
         if (!fire && MenuConfig::ShowGrenadeAir)
         {
@@ -433,7 +450,9 @@ void FrameCheats_Run()
     }
 
     if (MenuConfig::ShowItems) DrawItems(gGame.View, localPos);
-    if (MenuConfig::ShowGrenades && haveLocal) DrawGrenades(gGame.View, localPos);
+    // Grenades are drawn even when the local player is dead/spectating: the
+    // frame still carries projectile positions, only the distance text suffers.
+    if (MenuConfig::ShowGrenades) DrawGrenades(gGame.View, localPos);
 
     if (MenuConfig::ShowSnapline && haveLocal)
     {
@@ -492,9 +511,10 @@ void FrameCheats_Run()
         char sb[128];
         const float* vm = FrameData::g_frame.view;
         const float rl2 = vm[0] * vm[0] + vm[1] * vm[1] + vm[2] * vm[2];
-        sprintf_s(sb, sizeof(sb), "seq %u | players %u | items %u | fov %.0f | m0 %.2f rl2 %.2f",
+        sprintf_s(sb, sizeof(sb), "seq %u | players %u | items %u | gren %u | fov %.0f | m0 %.2f rl2 %.2f",
                   FrameData::g_frame.seq, FrameData::g_frame.playerCount,
                   (unsigned)FrameData::g_frame.items.size(),
+                  (unsigned)FrameData::g_frame.grenades.size(),
                   FrameData::g_frame.fov, vm[0], rl2);
         TextShadow(sb, { 12.f, 12.f }, ImColor(180, 180, 180, 160), 12, false);
     }

@@ -30,6 +30,11 @@ namespace MenuConfig
 
 	inline bool ShowMenu = false;   // HOME toggles; start clean so the overlay is unobstructed
 
+	// Menu window rect from the last frame (left, top, right, bottom). The
+	// overlay only drops WS_EX_TRANSPARENT while the cursor is inside it, so
+	// clicks everywhere else still reach the game.
+	inline float MenuRect[4] = { 0.f, 0.f, 0.f, 0.f };
+
 	inline bool ShowRadar = true;
 	inline float RadarRange = 150;
 	inline float RadarPointSizeProportion = 1.f;

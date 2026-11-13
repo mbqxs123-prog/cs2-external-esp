@@ -135,9 +135,15 @@ int main(int argc, char** argv)
     }
     if (HasArg(argc, argv, "--selftest")) return SelfTest();
 
+    // Normal launch: the console would sit on top of the game and steal focus.
+    // Diagnostics above keep it visible because they are meant to be read.
+    const HWND console = GetConsoleWindow();
+    if (console) { ShowWindow(console, SW_HIDE); }
+
     const bool noDriver    = HasArg(argc, argv, "--no-driver");
     const bool driverOnly  = HasArg(argc, argv, "--driver-only");
     const bool forceDriver = HasArg(argc, argv, "--force-driver");
+    if (HasArg(argc, argv, "--menu")) { MenuConfig::ShowMenu = true; }
 
     if (!noDriver)
     {
@@ -149,8 +155,7 @@ int main(int argc, char** argv)
         else
         {
             printf("driver not ready: %s\n", DriverLoader::LastError());
-            if (driverOnly) return 3;
-            printf("continuing without a verified driver; the overlay will stay empty\n");
+            MessageBoxW(nullptr, L"Driver load failed. Check HVCI off, blocklist off, AV whitelist.", L"CS2ESP", MB_ICONWARNING | MB_OK);
         }
     }
     if (driverOnly) return 0;
@@ -167,11 +172,13 @@ int main(int argc, char** argv)
 
     // The overlay may be started before the game: keep retrying for two minutes
     // instead of exiting on the first "window not found".
+    bool attached = false;
     for (int attempt = 0; attempt < 60; attempt++)
     {
         try
         {
             Gui.AttachAnotherWindow("Counter-Strike 2", "SDL_app", FrameCheats_Run);
+            attached = true;
             break;
         }
         catch (OSImGui::OSException& e)
@@ -182,6 +189,11 @@ int main(int argc, char** argv)
             }
             Sleep(2000);
         }
+    }
+
+    if (!attached)
+    {
+        MessageBoxW(nullptr, L"CS2 window not found in 2 min. Use windowed/borderless mode.", L"CS2ESP", MB_ICONINFORMATION | MB_OK);
     }
 
     std::cout << "exit." << std::endl;

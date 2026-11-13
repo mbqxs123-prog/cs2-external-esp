@@ -249,10 +249,23 @@ namespace OSImGui
         else
             SetWindowDisplayAffinity(Window.hWnd, WDA_NONE);
 
-        if (ImGui::GetIO().WantCaptureMouse)
-            SetWindowLong(Window.hWnd, GWL_EXSTYLE, GetWindowLong(Window.hWnd, GWL_EXSTYLE) & (~WS_EX_LAYERED));
-        else
-            SetWindowLong(Window.hWnd, GWL_EXSTYLE, GetWindowLong(Window.hWnd, GWL_EXSTYLE) | WS_EX_LAYERED);
+        // Click-through: the overlay must stay WS_EX_TRANSPARENT everywhere
+        // except over the menu, otherwise the whole screen stops receiving
+        // clicks. MenuRect is written by MenuCn::Draw from the previous frame.
+        POINT cursor;
+        GetCursorPos(&cursor);
+        ScreenToClient(Window.hWnd, &cursor);
+        const bool overMenu = MenuConfig::ShowMenu &&
+            cursor.x >= MenuConfig::MenuRect[0] && cursor.x <= MenuConfig::MenuRect[2] &&
+            cursor.y >= MenuConfig::MenuRect[1] && cursor.y <= MenuConfig::MenuRect[3];
+        {
+            LONG_PTR ex = GetWindowLongPtr(Window.hWnd, GWL_EXSTYLE);
+            if (overMenu)
+                ex &= ~(LONG_PTR)WS_EX_TRANSPARENT;
+            else
+                ex |= (LONG_PTR)WS_EX_TRANSPARENT;
+            SetWindowLongPtr(Window.hWnd, GWL_EXSTYLE, ex);
+        }
         return true;
     }
 

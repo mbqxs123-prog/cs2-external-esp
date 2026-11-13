@@ -77,6 +77,8 @@ p(t) = pos + vel·t + ½·(0, 0, −g)·t²      t ∈ [0.05, TrajectoryTime]，
 | 尺寸默认值 | `ItemBoxWidth=26`、`ItemLabelSize=11`、`GrenadeLabelSize=12` 等于旧硬编码 |
 | 距离换算 | 统一为 `52.49 units/m`（旧投掷物用的是 `39.37`，偏大约 33%）；玩家距离本来就由驱动按正确比例计算，现在三者一致 |
 | 颜色 | 未改动 `ItemColor` / `GrenadeColor` / `C4Color` / `FireColor`；新增类型（烟雾/闪光/HE/诱饵）用内置常量，不占用已有配置项 |
+| overlay 点击穿透 | 只有鼠标落在菜单矩形内时才移除 `WS_EX_TRANSPARENT`，其余区域点击照常传给游戏 |
+| 飞行中投掷物 | 即使帧里没有半径，也会画中心点 + 速度方向线，不再出现「什么都没有」 |
 | 性能 | 每个投掷物最多 60 段折线（3.0 s / 0.05 s），默认关闭时零开销 |
 
 ## 4. 验证

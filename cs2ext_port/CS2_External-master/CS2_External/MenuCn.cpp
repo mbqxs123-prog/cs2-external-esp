@@ -122,6 +122,17 @@ namespace MenuCn
             ImGui::EndTabBar();
         }
 
+        // Remember the window rect so the overlay can keep click-through
+        // everywhere except over the menu itself.
+        {
+            const ImVec2 p = ImGui::GetWindowPos();
+            const ImVec2 s = ImGui::GetWindowSize();
+            MenuConfig::MenuRect[0] = p.x;
+            MenuConfig::MenuRect[1] = p.y;
+            MenuConfig::MenuRect[2] = p.x + s.x;
+            MenuConfig::MenuRect[3] = p.y + s.y;
+        }
+
         ImGui::End();
     }
 }
