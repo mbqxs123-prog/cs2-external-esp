@@ -1,11 +1,18 @@
-# CS2 External ESP — kernel frame channel
+# External overlay research: kernel memory sampling → shared-memory frame → D3D11 surface
 
-外部透视工具：**内核驱动采样 → 共享内存帧 → D3D11/ImGui 覆盖层**。
+一个**外部渲染**方向的工程实践项目，把下面三件事串成一条可测量的数据通路：
 
-显示端不注入游戏、不写游戏内存、不打开 `cs2.exe`；驱动只用
+1. 内核侧按固定节奏采样目标进程的**结构化数据**（不注入、不修改目标内存）；
+2. 通过一块**共享内存 section** 做零 IPC 调用的帧传递（seqlock + 校验和）；
+3. 用户态用 **D3D11 + ImGui** 在独立透明窗口里渲染这块帧。
+
+显示端不打开目标进程、不注入、不挂钩；驱动只用
 `PsLookupProcessByProcessId` + `MmCopyVirtualMemory` 读内存，不创建进程句柄。
+项目里的"目标进程"是本地运行的 CS2，用来验证这条通路在真实高频数据下的表现。
 
-> 仅用于逆向工程、内核驱动开发与图形覆盖层技术的学习与研究。使用者需自行确认所在地区的法律法规与目标平台的服务条款。
+> 仅用于逆向工程、Windows 内核驱动、图形覆盖层与进程间通信技术的学习与研究。
+> 使用者需自行确认所在地区的法律法规与目标软件的服务条款。作者不鼓励、不支持将其用于
+> 任何违反服务条款或侵害他人权益的场景。
 
 ## 架构
 
@@ -90,7 +97,6 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools\run-esp.ps1
 - `docs/ARCH-1113.md` — 架构、数据流、通道实现
 - `docs/OFFSETS.md` — 偏移来源与更新流程
 - `docs/TEST-1113.md` — 实机测试步骤
-- `docs/STEALTH-1113.md` — 检测面评估（PAC / 5E / VAC）
 - `docs/USAGE.md` — 使用说明
 - `docs/PACKAGE-1113.md` — 打包说明
 
