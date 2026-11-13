@@ -75,6 +75,33 @@ namespace MenuConfig
 	inline bool ShowTeam = false;         // draw teammates too
 	inline bool ShowLocalInfo = true;     // frame status line (seq / counts)
 
+	// ---- ground items: category filters keep the old "show everything"
+	// behaviour at their defaults; the genuinely new elements (distance text)
+	// default off so the existing rendering is unchanged.
+	inline bool  ShowItemWeapons   = true;
+	inline bool  ShowItemGrenades  = true;
+	inline bool  ShowItemC4        = true;
+	inline bool  ShowItemKits      = true;
+	inline float ItemMaxDistance   = 0.f;    // metres; 0 = unlimited (0..100)
+	inline bool  ShowItemDistance  = false;  // new element -> off by default
+	inline float ItemBoxWidth      = 26.f;   // px (16..48)
+	inline int   ItemLabelSize     = 11;     // px (8..16)
+	inline bool  ShowItemAmmo      = true;   // magazine number under the box
+
+	// ---- grenades
+	inline bool  ShowGrenadeAir        = true;   // in-flight projectiles
+	inline bool  ShowGrenadeTrajectory = false;  // new: predicted parabola -> off
+	inline float GrenadeTrajectoryTime = 1.5f;   // seconds to project (0.5..3.0)
+	inline float GrenadeGravity        = 800.f;  // units/s^2 (400..1200)
+	inline bool  ShowGrenadeRadius     = true;   // blast / burn radius ring
+	inline bool  ShowGrenadeFire       = true;   // burning area (molotov/incendiary)
+	inline bool  ShowGrenadeSmoke      = true;
+	inline bool  ShowGrenadeFlash      = true;
+	inline bool  ShowGrenadeHE         = true;
+	inline bool  ShowGrenadeDecoy      = true;
+	inline bool  ShowGrenadeDistance   = true;   // existing label includes distance
+	inline int   GrenadeLabelSize      = 12;     // px (9..18)
+
 	inline ImColor ArmorColor = ImColor(90, 165, 255, 255);
 	inline ImColor GearColor = ImColor(230, 230, 230, 235);
 	inline ImColor C4Color = ImColor(255, 70, 70, 255);

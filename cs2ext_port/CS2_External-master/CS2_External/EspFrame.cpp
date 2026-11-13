@@ -175,11 +175,36 @@ static void DrawPlayer(CEntity& e, CView& view)
 }
 
 // ---------------------------------------------------------------- items
-static void DrawItems(CView& view)
+static const float kUnitsPerMetre = 52.49f;   // CS2: 1 unit = 1.905 cm
+
+static bool ItemCategoryVisible(uint8_t cat)
+{
+    switch (cat)
+    {
+    case FrameData::ITEM_WEAPON:  return MenuConfig::ShowItemWeapons;
+    case FrameData::ITEM_GRENADE: return MenuConfig::ShowItemGrenades;
+    case FrameData::ITEM_C4:      return MenuConfig::ShowItemC4;
+    case FrameData::ITEM_KIT:     return MenuConfig::ShowItemKits;
+    default:                      return true;
+    }
+}
+
+static void DrawItems(CView& view, const Vec3& localPos)
 {
     const auto& items = FrameData::g_frame.items;
     for (const auto& it : items)
     {
+        if (!ItemCategoryVisible(it.cat)) continue;
+
+        float dist = 0.f;
+        {
+            const float dx = it.pos.x - localPos.x;
+            const float dy = it.pos.y - localPos.y;
+            const float dz = it.pos.z - localPos.z;
+            dist = std::sqrt(dx * dx + dy * dy + dz * dz) / kUnitsPerMetre;
+        }
+        if (MenuConfig::ItemMaxDistance > 0.f && dist > MenuConfig::ItemMaxDistance) continue;
+
         Vec2 s;
         if (!view.WorldToScreen(it.pos, s)) continue;
         if (s.x < -50 || s.y < -50 || s.x > 4000 || s.y > 4000) continue;
@@ -194,40 +219,112 @@ static void DrawItems(CView& view)
         if (it.flags & FrameData::IF_PLANTED) label = "C4 (planted)";
         else if (it.flags & FrameData::IF_ON_GROUND) label += " (drop)";
 
-        const float bw = 26.f, bh = 12.f;
+        if (MenuConfig::ShowItemDistance)
+        {
+            char db[32]; sprintf_s(db, sizeof(db), " %.0fm", dist);
+            label += db;
+        }
+
+        const float bw = MenuConfig::ItemBoxWidth;
+        const float bh = bw * 0.46f;
         Gui.Rectangle({ s.x - bw * 0.5f, s.y - bh * 0.5f }, { bw, bh }, col, 1.2f);
-        if (it.flags & FrameData::IF_HAS_AMMO && it.ammo)
+        if (MenuConfig::ShowItemAmmo && (it.flags & FrameData::IF_HAS_AMMO) && it.ammo)
         {
             char ab[16]; sprintf_s(ab, sizeof(ab), "%u", (unsigned)it.ammo);
-            TextShadow(ab, { s.x, s.y + 9.f }, col, 11, true);
+            TextShadow(ab, { s.x, s.y + bh * 0.5f + 3.f }, col, (float)MenuConfig::ItemLabelSize, true);
         }
-        TextShadow(label, { s.x, s.y - 14.f }, col, 11, true);
+        TextShadow(label, { s.x, s.y - bh * 0.5f - 12.f }, col, (float)MenuConfig::ItemLabelSize, true);
     }
 }
 
 // ---------------------------------------------------------------- grenades
+enum GrenClass { GC_OTHER = 0, GC_HE, GC_FLASH, GC_SMOKE, GC_FIRE, GC_DECOY };
+
+static GrenClass GrenClassOf(const FrameData::GrenRec& g)
+{
+    if (g.kind == FrameData::GREN_KIND_FIRE) return GC_FIRE;
+    switch (g.id)
+    {
+    case 43: return GC_HE;
+    case 42: return GC_FLASH;
+    case 44: return GC_SMOKE;
+    case 45: case 47: return GC_FIRE;      // molotov / incendiary projectile
+    case 46: return GC_DECOY;
+    default: break;
+    }
+    return GC_OTHER;
+}
+
+static bool GrenClassVisible(GrenClass c)
+{
+    switch (c)
+    {
+    case GC_HE:    return MenuConfig::ShowGrenadeHE;
+    case GC_FLASH: return MenuConfig::ShowGrenadeFlash;
+    case GC_SMOKE: return MenuConfig::ShowGrenadeSmoke;
+    case GC_FIRE:  return MenuConfig::ShowGrenadeFire;
+    case GC_DECOY: return MenuConfig::ShowGrenadeDecoy;
+    default:       return MenuConfig::ShowGrenadeAir;
+    }
+}
+
+static ImColor GrenClassColor(GrenClass c)
+{
+    switch (c)
+    {
+    case GC_HE:    return ImColor(255, 90, 90, 255);
+    case GC_FLASH: return ImColor(255, 245, 130, 255);
+    case GC_SMOKE: return ImColor(205, 205, 205, 255);
+    case GC_FIRE:  return MenuConfig::FireColor;
+    case GC_DECOY: return ImColor(150, 255, 150, 255);
+    default:       return MenuConfig::GrenadeColor;
+    }
+}
+
+// Typical effect radius (CS2 units) used when the frame carries no radius.
+static float GrenClassRadius(GrenClass c, float fromFrame)
+{
+    if (fromFrame > 1.f) return fromFrame;
+    switch (c)
+    {
+    case GC_HE:    return 350.f;
+    case GC_FLASH: return 200.f;
+    case GC_SMOKE: return 144.f;
+    case GC_FIRE:  return 150.f;
+    case GC_DECOY: return 100.f;
+    default:       return 0.f;
+    }
+}
+
 static void DrawGrenades(CView& view, const Vec3& localPos)
 {
     const auto& gs = FrameData::g_frame.grenades;
     for (const auto& g : gs)
     {
+        const GrenClass cls = GrenClassOf(g);
+        if (!GrenClassVisible(cls)) continue;
+
         Vec2 s;
         if (!view.WorldToScreen(g.pos, s)) continue;
 
         const bool fire = (g.kind == FrameData::GREN_KIND_FIRE);
-        ImColor col = fire ? MenuConfig::FireColor : MenuConfig::GrenadeColor;
+        const ImColor col = GrenClassColor(cls);
 
-        // world radius ring (blast radius / burning area)
+        // effect radius ring (blast / burn / smoke)
         float r = 0.f;
-        if (g.radius > 1.f) r = WorldRadiusToPixels(view, g.pos, g.radius);
-        if (r > 2.f)
+        if (MenuConfig::ShowGrenadeRadius)
         {
-            Gui.Circle({ s.x, s.y }, r, ImColor(col.Value.x, col.Value.y, col.Value.z, 120.f), 1.2f, 48);
-            Gui.CircleFilled({ s.x, s.y }, 2.f, col, 8);
+            const float worldR = GrenClassRadius(cls, g.radius);
+            if (worldR > 1.f) r = WorldRadiusToPixels(view, g.pos, worldR);
+            if (r > 2.f)
+            {
+                Gui.Circle({ s.x, s.y }, r, ImColor(col.Value.x, col.Value.y, col.Value.z, 120.f), 1.2f, 48);
+                Gui.CircleFilled({ s.x, s.y }, 2.f, col, 8);
+            }
         }
 
-        // flight path from the throw point to where it is now
-        if (!fire)
+        // history: throw point -> current position
+        if (!fire && MenuConfig::ShowGrenadeAir)
         {
             Vec2 i0;
             if (view.WorldToScreen(g.initPos, i0))
@@ -244,13 +341,54 @@ static void DrawGrenades(CView& view, const Vec3& localPos)
             }
         }
 
+        // prediction: parabola from the current position using velocity + gravity.
+        // No map geometry is available, so the arc stops at the first surface
+        // crossing only in the sense of "time budget"; it is not a collision trace.
+        if (MenuConfig::ShowGrenadeTrajectory && !fire)
+        {
+            const float dt = 0.05f;
+            const float gz = MenuConfig::GrenadeGravity;
+            Vec3 prev = g.pos;
+            Vec2 prevS{};
+            bool prevOk = view.WorldToScreen(prev, prevS);
+
+            for (float t = dt; t <= MenuConfig::GrenadeTrajectoryTime; t += dt)
+            {
+                Vec3 p = g.pos;
+                p.x += g.vel.x * t;
+                p.y += g.vel.y * t;
+                p.z += g.vel.z * t - 0.5f * gz * t * t;
+
+                Vec2 sp;
+                if (view.WorldToScreen(p, sp))
+                {
+                    if (prevOk)
+                        Gui.Line(prevS, sp, ImColor(col.Value.x, col.Value.y, col.Value.z, 110.f), 1.3f);
+                    prevS = sp;
+                    prevOk = true;
+                }
+                else
+                {
+                    prevOk = false;
+                }
+            }
+            // landing hint: small cross at the last projected point
+            if (prevOk)
+                Gui.CircleFilled({ prevS.x, prevS.y }, 3.f,
+                                 ImColor(col.Value.x, col.Value.y, col.Value.z, 200.f), 8);
+        }
+
         // label: type + distance
         const char* name = FrameData::GrenadeName(g.kind, g.id);
-        char lb[64];
+        char lb[72];
         const float dx = g.pos.x - localPos.x, dy = g.pos.y - localPos.y, dz = g.pos.z - localPos.z;
-        const float dist = std::sqrt(dx * dx + dy * dy + dz * dz) / 39.37f;
-        sprintf_s(lb, sizeof(lb), "%s %.0fm", name, dist);
-        TextShadow(lb, { s.x, s.y - (r > 6.f ? r + 12.f : 14.f) }, col, 12, true);
+        const float dist = std::sqrt(dx * dx + dy * dy + dz * dz) / kUnitsPerMetre;
+        if (MenuConfig::ShowGrenadeDistance)
+            sprintf_s(lb, sizeof(lb), "%s %.0fm", name, dist);
+        else
+            sprintf_s(lb, sizeof(lb), "%s", name);
+        TextShadow(lb, { s.x, s.y - (r > 6.f ? r + 12.f : 14.f) }, col,
+                   (float)MenuConfig::GrenadeLabelSize, true);
     }
 }
 
@@ -294,7 +432,7 @@ void FrameCheats_Run()
         }
     }
 
-    if (MenuConfig::ShowItems) DrawItems(gGame.View);
+    if (MenuConfig::ShowItems) DrawItems(gGame.View, localPos);
     if (MenuConfig::ShowGrenades && haveLocal) DrawGrenades(gGame.View, localPos);
 
     if (MenuConfig::ShowSnapline && haveLocal)

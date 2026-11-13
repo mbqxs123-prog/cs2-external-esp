@@ -97,6 +97,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools\run-esp.ps1
 - `docs/ARCH-1113.md` — 架构、数据流、通道实现
 - `docs/OFFSETS.md` — 偏移来源与更新流程
 - `docs/TEST-1113.md` — 实机测试步骤
+- `docs/OPTIONS.md` — 物品/投掷物选项参数表（取值、默认值、兼容性）
 - `docs/USAGE.md` — 使用说明
 - `docs/PACKAGE-1113.md` — 打包说明
 

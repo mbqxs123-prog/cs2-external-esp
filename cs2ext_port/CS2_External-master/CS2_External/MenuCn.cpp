@@ -49,7 +49,49 @@ namespace MenuCn
                 ColorDot("##c4", MenuConfig::C4Color);
 
                 Gui.MyCheckBox(u8"地面物品", &MenuConfig::ShowItems);
+                if (ImGui::TreeNode(u8"物品选项"))
+                {
+                    Gui.MyCheckBox(u8"武器", &MenuConfig::ShowItemWeapons);
+                    Gui.MyCheckBox(u8"手雷", &MenuConfig::ShowItemGrenades);
+                    Gui.MyCheckBox(u8"C4", &MenuConfig::ShowItemC4);
+                    Gui.MyCheckBox(u8"拆弹器", &MenuConfig::ShowItemKits);
+                    Gui.MyCheckBox(u8"显示距离", &MenuConfig::ShowItemDistance);
+                    Gui.MyCheckBox(u8"显示弹匣", &MenuConfig::ShowItemAmmo);
+                    float dmin = 0.f, dmax = 100.f;
+                    Gui.SliderScalarEx1(u8"最远距离(m)", ImGuiDataType_Float, &MenuConfig::ItemMaxDistance,
+                                        &dmin, &dmax, "%.0f", ImGuiSliderFlags_None);
+                    float wmin = 16.f, wmax = 48.f;
+                    Gui.SliderScalarEx1(u8"图标大小", ImGuiDataType_Float, &MenuConfig::ItemBoxWidth,
+                                        &wmin, &wmax, "%.0f", ImGuiSliderFlags_None);
+                    int lmin = 8, lmax = 16;
+                    Gui.SliderScalarEx1(u8"文字大小", ImGuiDataType_S32, &MenuConfig::ItemLabelSize,
+                                        &lmin, &lmax, "%d", ImGuiSliderFlags_None);
+                    ImGui::TreePop();
+                }
+
                 Gui.MyCheckBox(u8"投掷物", &MenuConfig::ShowGrenades);
+                if (ImGui::TreeNode(u8"投掷物选项"))
+                {
+                    Gui.MyCheckBox(u8"空中飞行", &MenuConfig::ShowGrenadeAir);
+                    Gui.MyCheckBox(u8"抛物线预测", &MenuConfig::ShowGrenadeTrajectory);
+                    Gui.MyCheckBox(u8"作用范围圈", &MenuConfig::ShowGrenadeRadius);
+                    Gui.MyCheckBox(u8"火焰范围", &MenuConfig::ShowGrenadeFire);
+                    Gui.MyCheckBox(u8"烟雾范围", &MenuConfig::ShowGrenadeSmoke);
+                    Gui.MyCheckBox(u8"闪光范围", &MenuConfig::ShowGrenadeFlash);
+                    Gui.MyCheckBox(u8"高爆范围", &MenuConfig::ShowGrenadeHE);
+                    Gui.MyCheckBox(u8"诱饵", &MenuConfig::ShowGrenadeDecoy);
+                    Gui.MyCheckBox(u8"显示距离", &MenuConfig::ShowGrenadeDistance);
+                    float tmin = 0.5f, tmax = 3.0f;
+                    Gui.SliderScalarEx1(u8"预测时长(s)", ImGuiDataType_Float, &MenuConfig::GrenadeTrajectoryTime,
+                                        &tmin, &tmax, "%.1f", ImGuiSliderFlags_None);
+                    float gmin = 400.f, gmax = 1200.f;
+                    Gui.SliderScalarEx1(u8"重力", ImGuiDataType_Float, &MenuConfig::GrenadeGravity,
+                                        &gmin, &gmax, "%.0f", ImGuiSliderFlags_None);
+                    int glmin = 9, glmax = 18;
+                    Gui.SliderScalarEx1(u8"文字大小", ImGuiDataType_S32, &MenuConfig::GrenadeLabelSize,
+                                        &glmin, &glmax, "%d", ImGuiSliderFlags_None);
+                    ImGui::TreePop();
+                }
 
                 Gui.MyCheckBox(u8"视线指示", &MenuConfig::ShowEyeRay);
                 Gui.MyCheckBox(u8"屏幕连线", &MenuConfig::ShowSnapline);
