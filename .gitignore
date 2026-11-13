@@ -29,6 +29,9 @@ bin/
 *.jpg
 *.dmp
 
+# ...except the donation QR images shown in README
+!docs/assets/*.png
+
 # IDE / editors
 .vs/
 .vscode/

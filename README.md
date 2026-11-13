@@ -109,6 +109,17 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools\run-esp.ps1
 | [OS-ImGui](https://github.com/TKazer/OS-ImGui) | MIT | D3D11 覆盖层封装 |
 | kdmapper | MIT | 驱动映射（二进制不随仓库分发） |
 
+## 反馈与支持
+
+- 反馈群（QQ）：**622377806**
+- 构建报错、偏移失效、功能建议都可以在群里反馈，或直接开 Issue。
+
+如果这个项目对你有帮助，可以扫码支持一下：
+
+| 微信支付 | 支付宝 |
+|:---:|:---:|
+| <img src="docs/assets/wechat.png" width="220" alt="微信支付"> | <img src="docs/assets/alipay.png" width="220" alt="支付宝"> |
+
 ## 免责声明
 
 本项目按 MIT 许可「按原样」提供，不含任何担保。作者不对使用本项目造成的任何后果负责，
