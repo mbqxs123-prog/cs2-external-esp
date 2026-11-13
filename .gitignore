@@ -1,0 +1,45 @@
+# build outputs
+x64/
+obj/
+bin/
+*.obj
+*.pdb
+*.ilk
+*.idb
+*.iobj
+*.ipdb
+*.res
+*.tlog
+*.lastbuildstate
+*.log
+
+# binaries / payloads (never commit)
+*.exe
+*.dll
+*.sys
+*.bin
+*.dat
+*.zip
+*.7z
+
+# runtime artifacts
+*.db
+*.bmp
+*.png
+*.jpg
+*.dmp
+
+# IDE / editors
+.vs/
+.vscode/
+*.user
+*.suo
+.idea/
+
+# python
+__pycache__/
+*.pyc
+
+# os
+Thumbs.db
+desktop.ini

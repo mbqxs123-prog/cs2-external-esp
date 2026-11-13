@@ -1,0 +1,211 @@
+#include "Entity.h"
+
+bool CEntity::UpdateController(const DWORD64& PlayerControllerAddress)
+{
+	if (PlayerControllerAddress == 0)
+		return false;
+	this->Controller.Address = PlayerControllerAddress;
+
+	if (!this->Controller.GetHealth())
+		return false;
+	if (!this->Controller.GetIsAlive())
+		return false;
+	if (!this->Controller.GetTeamID())
+		return false;
+	if (!this->Controller.GetPlayerName())
+		return false;
+
+	this->Pawn.Address = this->Controller.GetPlayerPawnAddress();
+
+	return true;
+}
+
+bool CEntity::UpdatePawn(const DWORD64& PlayerPawnAddress)
+{
+	if (PlayerPawnAddress == 0)
+		return false;
+	this->Pawn.Address = PlayerPawnAddress;
+
+	if (!this->Pawn.GetPos())
+		return false;
+	if (!this->Pawn.GetViewAngle())
+		return false;
+	if (!this->Pawn.GetWeaponName())
+		return false;
+	if (!this->Pawn.GetShotsFired())
+		return false;
+	if (!this->Pawn.GetHealth())
+		return false;
+	if (!this->Pawn.GetTeamID())
+		return false;
+	if (!this->Pawn.GetFov())
+		return false;
+	if (!this->Pawn.GetSpottedMask())
+		return false;
+	if (!this->Pawn.GetFFlags())
+		return false;
+	if (!this->Pawn.BoneData.UpdateAllBoneData(PlayerPawnAddress))
+		return false;
+
+	return true;
+}
+
+bool PlayerController::GetTeamID()
+{
+	return GetDataAddressWithOffset<int>(Address, Offset::Entity.m_iTeamNum, this->m_iTeamNum);
+}
+
+bool PlayerController::GetHealth()
+{
+	return GetDataAddressWithOffset<int>(Address, Offset::Entity.m_iHealth, this->m_iHealth);
+}
+
+bool PlayerController::GetIsAlive()
+{
+	return GetDataAddressWithOffset<int>(Address, Offset::Entity.m_bPawnIsAlive, this->m_bPawnIsAlive);
+}
+
+bool PlayerController::GetPlayerName()
+{
+	char Buffer[MAX_PATH]{};
+
+	if (!ProcessMgr.ReadMemory(Address + Offset::Entity.m_iszPlayerName, Buffer, MAX_PATH))
+		return false;
+
+	this->PlayerName = Buffer;
+	if (this->PlayerName.empty())
+		this->PlayerName = "Name_None";
+
+	return true;
+}
+
+bool PlayerPawn::GetViewAngle()
+{
+	return GetDataAddressWithOffset<Vec2>(Address, Offset::Pawn.m_angEyeAngles, this->ViewAngle);
+}
+
+bool PlayerPawn::GetSpottedMask()
+{
+	return GetDataAddressWithOffset<DWORD64>(Address, Offset::Pawn.m_bSpottedByMask, this->m_bSpottedByMask);
+}
+
+bool PlayerPawn::GetWeaponName()
+{
+	DWORD64 WeaponServices = 0;
+	DWORD ActiveWeaponHandle = 0;
+	DWORD64 EntityListEntry = 0;
+	DWORD64 WeaponAddress = 0;
+	DWORD64 WeaponVData = 0;
+	DWORD64 WeaponNameAddress = 0;
+	char Buffer[40]{};
+
+	if (!ProcessMgr.ReadMemory<DWORD64>(this->Address + Offset::Pawn.m_pWeaponServices, WeaponServices) || WeaponServices == 0)
+		return false;
+
+	if (!ProcessMgr.ReadMemory<DWORD>(WeaponServices + Offset::Weapon.m_hActiveWeapon, ActiveWeaponHandle))
+		return false;
+	if (ActiveWeaponHandle == 0 || ActiveWeaponHandle == 0xFFFFFFFF)
+		return false;
+
+	if (!ProcessMgr.ReadMemory<DWORD64>(gGame.GetEntityListAddress(), EntityListEntry))
+		return false;
+
+	if (!ProcessMgr.ReadMemory<DWORD64>(EntityListEntry + 0x10 + 8 * ((ActiveWeaponHandle & 0x7FFF) >> 9), EntityListEntry))
+		return false;
+
+	if (!ProcessMgr.ReadMemory<DWORD64>(EntityListEntry + gGame.GetEntityListEntrySize() * (ActiveWeaponHandle & 0x1FF), WeaponAddress) || WeaponAddress == 0)
+		return false;
+
+	if (!ProcessMgr.ReadMemory<DWORD64>(WeaponAddress + Offset::Weapon.m_nSubclassID + 0x8, WeaponVData) || WeaponVData == 0)
+		return false;
+
+	if (!ProcessMgr.ReadMemory<DWORD64>(WeaponVData + Offset::Weapon.m_szName, WeaponNameAddress) || WeaponNameAddress == 0)
+		return false;
+
+	if (!ProcessMgr.ReadMemory(WeaponNameAddress, Buffer, sizeof(Buffer)))
+		return false;
+
+	WeaponName = std::string(Buffer);
+	std::size_t Index = WeaponName.find("_");
+	if (Index == std::string::npos || WeaponName.empty())
+	{
+		WeaponName = "Weapon_None";
+	}
+	else
+	{
+		WeaponName = WeaponName.substr(Index + 1, WeaponName.size() - Index - 1);
+	}
+
+	return true;
+}
+
+bool PlayerPawn::GetShotsFired()
+{
+	return GetDataAddressWithOffset<DWORD>(Address, Offset::Pawn.m_iShotsFired, this->ShotsFired);
+}
+
+bool PlayerPawn::GetTeamID()
+{
+	return GetDataAddressWithOffset<int>(Address, Offset::Entity.m_iTeamNum, this->m_iTeamNum);
+}
+
+DWORD64 PlayerController::GetPlayerPawnAddress()
+{
+	DWORD64 EntityPawnListEntry = 0;
+	DWORD64 EntityPawnAddress = 0;
+
+	if (!GetDataAddressWithOffset<DWORD>(Address, Offset::Entity.m_hPlayerPawn, this->Pawn))
+		return 0;
+
+	if (!ProcessMgr.ReadMemory<DWORD64>(gGame.GetEntityListAddress(), EntityPawnListEntry))
+		return 0;
+
+	if (!ProcessMgr.ReadMemory<DWORD64>(EntityPawnListEntry + 0x10 + 8 * ((Pawn & 0x7FFF) >> 9), EntityPawnListEntry))
+		return 0;
+
+	if (!ProcessMgr.ReadMemory<DWORD64>(EntityPawnListEntry + gGame.GetEntityListEntrySize() * (Pawn & 0x1FF), EntityPawnAddress))
+		return 0;
+
+	return EntityPawnAddress;
+}
+
+bool PlayerPawn::GetPos()
+{
+	return GetDataAddressWithOffset<Vec3>(Address, Offset::Pawn.m_vOldOrigin, this->m_vOldOrigin);
+}
+
+bool PlayerPawn::GetHealth()
+{
+	return GetDataAddressWithOffset<int>(Address, Offset::Entity.m_iHealth, this->m_iHealth);
+}
+
+bool PlayerPawn::GetFov()
+{
+	DWORD64 CameraServices = 0;
+	if (!ProcessMgr.ReadMemory<DWORD64>(Address + Offset::Pawn.m_pCameraServices, CameraServices))
+		return false;
+	return GetDataAddressWithOffset<int>(CameraServices, Offset::Pawn.m_iFovStart, this->Fov);
+}
+
+bool PlayerPawn::GetFFlags()
+{
+	return GetDataAddressWithOffset<int>(Address, Offset::Pawn.m_fFlags, this->m_fFlags);
+}
+
+bool CEntity::IsAlive()
+{
+	return this->Controller.m_bPawnIsAlive == 1 && this->Pawn.m_iHealth > 0;
+}
+
+bool CEntity::IsInScreen()
+{
+	return gGame.View.WorldToScreen(this->Pawn.m_vOldOrigin, this->Pawn.ScreenPos);
+}
+
+const CBone& CEntity::GetBone() const
+{
+	// Frame-fed build: Pawn.Address is never a live game pointer (nothing reads
+	// the process), so the old "Address == 0 -> empty CBone" guard returned an
+	// empty vector and DrawBone dereferenced null at BonePosList[HEAD].
+	return this->Pawn.BoneData;
+}

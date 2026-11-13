@@ -1,0 +1,7 @@
+#include "resource.h"
+
+IDR_KDMAPPER RCDATA "kdmapper.bin"
+IDR_DRIVER   RCDATA "driver.bin"
+
+// RT_MANIFEST = 24, CREATEPROCESS_MANIFEST_RESOURCE_ID = 1
+1 24 "app.manifest"
