@@ -216,7 +216,7 @@ namespace OSImGui
         RegisterClassExW(&wc);
         if (Type == ATTACH)
         {
-			Window.hWnd = CreateWindowExW(WS_EX_TOPMOST | WS_EX_TRANSPARENT | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE, Window.wClassName.c_str(), Window.wName.c_str(), WS_POPUP, CW_USEDEFAULT, CW_USEDEFAULT, 100, 100, NULL, NULL, GetModuleHandle(NULL), NULL);
+			Window.hWnd = CreateWindowExW(WS_EX_TOPMOST | WS_EX_TRANSPARENT | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE | WS_EX_LAYERED, Window.wClassName.c_str(), Window.wName.c_str(), WS_POPUP, CW_USEDEFAULT, CW_USEDEFAULT, 100, 100, NULL, NULL, GetModuleHandle(NULL), NULL);
 			SetLayeredWindowAttributes(Window.hWnd, 0, 255, LWA_ALPHA);
         }
         else
@@ -280,11 +280,17 @@ namespace OSImGui
             cursor.y >= MenuConfig::MenuRect[1] && cursor.y <= MenuConfig::MenuRect[3];
         {
             LONG_PTR ex = GetWindowLongPtr(Window.hWnd, GWL_EXSTYLE);
-            if (overMenu)
-                ex &= ~(LONG_PTR)WS_EX_TRANSPARENT;
-            else
-                ex |= (LONG_PTR)WS_EX_TRANSPARENT;
-            SetWindowLongPtr(Window.hWnd, GWL_EXSTYLE, ex);
+            LONG_PTR nx = overMenu ? (ex & ~(LONG_PTR)WS_EX_TRANSPARENT)
+                                   : (ex | (LONG_PTR)WS_EX_TRANSPARENT);
+            if (nx != ex)
+            {
+                SetWindowLongPtr(Window.hWnd, GWL_EXSTYLE, nx);
+                // Force the window manager to recompute hit-testing: without
+                // SWP_FRAMECHANGED the style change is not picked up and the
+                // overlay keeps its previous click-through state.
+                SetWindowPos(Window.hWnd, NULL, 0, 0, 0, 0,
+                             SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+            }
         }
         // While the cursor is over the play area and the menu is closed, make
         // sure the game is the foreground window. CS2 routes the mouse through
