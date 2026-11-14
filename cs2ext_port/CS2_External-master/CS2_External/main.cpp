@@ -135,11 +135,6 @@ int main(int argc, char** argv)
     }
     if (HasArg(argc, argv, "--selftest")) return SelfTest();
 
-    // Normal launch: the console would sit on top of the game and steal focus.
-    // Diagnostics above keep it visible because they are meant to be read.
-    const HWND console = GetConsoleWindow();
-    if (console) { ShowWindow(console, SW_HIDE); }
-
     const bool noDriver    = HasArg(argc, argv, "--no-driver");
     const bool driverOnly  = HasArg(argc, argv, "--driver-only");
     const bool forceDriver = HasArg(argc, argv, "--force-driver");

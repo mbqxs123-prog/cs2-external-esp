@@ -107,7 +107,7 @@ try {
 $exe = Join-Path $outDir 'CS2ESP.exe'
 $pdb = Join-Path $outDir 'CS2ESP.pdb'
 $lflags = @(
-    '/nologo','/SUBSYSTEM:CONSOLE','/MACHINE:X64','/OPT:REF','/OPT:ICF','/INCREMENTAL:NO',
+    '/nologo','/SUBSYSTEM:WINDOWS','/ENTRY:mainCRTStartup','/MACHINE:X64','/OPT:REF','/OPT:ICF','/INCREMENTAL:NO',
     '/DEBUG','/DEBUGTYPE:CV',
     "/OUT:$exe",
     "/PDB:$pdb",
