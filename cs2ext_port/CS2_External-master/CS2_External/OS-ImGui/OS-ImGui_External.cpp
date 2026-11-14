@@ -138,6 +138,26 @@ namespace OSImGui
         if (!CreateMyWindow())
             throw OSException("CreateMyWindow() call failed");
 
+        // Hand foreground back to the game. CS2 delivers the mouse via raw
+        // input to the foreground window; if anything else (explorer, the
+        // launcher, another overlay) held foreground, the game would stop
+        // receiving input even though our window never activates.
+        if (DestWindow.hWnd)
+        {
+            const DWORD fgTid  = GetWindowThreadProcessId(GetForegroundWindow(), NULL);
+            const DWORD gameTid = GetWindowThreadProcessId(DestWindow.hWnd, NULL);
+            const DWORD curTid = GetCurrentThreadId();
+            if (fgTid && gameTid)
+            {
+                AttachThreadInput(curTid, fgTid, TRUE);
+                AttachThreadInput(curTid, gameTid, TRUE);
+                SetForegroundWindow(DestWindow.hWnd);
+                BringWindowToTop(DestWindow.hWnd);
+                AttachThreadInput(curTid, fgTid, FALSE);
+                AttachThreadInput(curTid, gameTid, FALSE);
+            }
+        }
+
         try {
             InitImGui(g_Device.g_pd3dDevice,g_Device.g_pd3dDeviceContext);
         }
@@ -265,6 +285,32 @@ namespace OSImGui
             else
                 ex |= (LONG_PTR)WS_EX_TRANSPARENT;
             SetWindowLongPtr(Window.hWnd, GWL_EXSTYLE, ex);
+        }
+        // While the cursor is over the play area and the menu is closed, make
+        // sure the game is the foreground window. CS2 routes the mouse through
+        // raw input to the foreground window, so if anything else is foreground
+        // the game ignores clicks even though clicks pass through to it.
+        {
+            static ULONGLONG lastFg = 0;
+            const ULONGLONG t = GetTickCount64();
+            const bool mouseInGame = cursor.x >= 0 && cursor.y >= 0 &&
+                                     cursor.x <= (LONG)Window.Size.x && cursor.y <= (LONG)Window.Size.y;
+            if (!MenuConfig::ShowMenu && mouseInGame && t - lastFg > 500 &&
+                GetForegroundWindow() != DestWindow.hWnd && DestWindow.hWnd)
+            {
+                lastFg = t;
+                const DWORD fgTid = GetWindowThreadProcessId(GetForegroundWindow(), NULL);
+                const DWORD gameTid = GetWindowThreadProcessId(DestWindow.hWnd, NULL);
+                const DWORD curTid = GetCurrentThreadId();
+                if (fgTid && gameTid)
+                {
+                    AttachThreadInput(curTid, fgTid, TRUE);
+                    AttachThreadInput(curTid, gameTid, TRUE);
+                    SetForegroundWindow(DestWindow.hWnd);
+                    AttachThreadInput(curTid, fgTid, FALSE);
+                    AttachThreadInput(curTid, gameTid, FALSE);
+                }
+            }
         }
         return true;
     }
