@@ -269,19 +269,16 @@ namespace OSImGui
         else
             SetWindowDisplayAffinity(Window.hWnd, WDA_NONE);
 
-        // Click-through: the overlay must stay WS_EX_TRANSPARENT everywhere
-        // except over the menu, otherwise the whole screen stops receiving
-        // clicks. MenuRect is written by MenuCn::Draw from the previous frame.
-        POINT cursor;
-        GetCursorPos(&cursor);
-        ScreenToClient(Window.hWnd, &cursor);
-        const bool overMenu = MenuConfig::ShowMenu &&
-            cursor.x >= MenuConfig::MenuRect[0] && cursor.x <= MenuConfig::MenuRect[2] &&
-            cursor.y >= MenuConfig::MenuRect[1] && cursor.y <= MenuConfig::MenuRect[3];
+        // Click-through: the overlay must stay WS_EX_TRANSPARENT except while
+        // the cursor is over one of its ImGui windows (menu, radar). ImGui's
+        // WantCaptureMouse covers every window, so use it instead of tracking a
+        // single rect. It is one frame stale (computed after NewFrame), which is
+        // fine for hit-testing.
         {
+            const bool overUI = ImGui::GetIO().WantCaptureMouse;
             LONG_PTR ex = GetWindowLongPtr(Window.hWnd, GWL_EXSTYLE);
-            LONG_PTR nx = overMenu ? (ex & ~(LONG_PTR)WS_EX_TRANSPARENT)
-                                   : (ex | (LONG_PTR)WS_EX_TRANSPARENT);
+            LONG_PTR nx = overUI ? (ex & ~(LONG_PTR)WS_EX_TRANSPARENT)
+                                 : (ex | (LONG_PTR)WS_EX_TRANSPARENT);
             if (nx != ex)
             {
                 SetWindowLongPtr(Window.hWnd, GWL_EXSTYLE, nx);
@@ -290,32 +287,6 @@ namespace OSImGui
                 // overlay keeps its previous click-through state.
                 SetWindowPos(Window.hWnd, NULL, 0, 0, 0, 0,
                              SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
-            }
-        }
-        // While the cursor is over the play area and the menu is closed, make
-        // sure the game is the foreground window. CS2 routes the mouse through
-        // raw input to the foreground window, so if anything else is foreground
-        // the game ignores clicks even though clicks pass through to it.
-        {
-            static ULONGLONG lastFg = 0;
-            const ULONGLONG t = GetTickCount64();
-            const bool mouseInGame = cursor.x >= 0 && cursor.y >= 0 &&
-                                     cursor.x <= (LONG)Window.Size.x && cursor.y <= (LONG)Window.Size.y;
-            if (!MenuConfig::ShowMenu && mouseInGame && t - lastFg > 500 &&
-                GetForegroundWindow() != DestWindow.hWnd && DestWindow.hWnd)
-            {
-                lastFg = t;
-                const DWORD fgTid = GetWindowThreadProcessId(GetForegroundWindow(), NULL);
-                const DWORD gameTid = GetWindowThreadProcessId(DestWindow.hWnd, NULL);
-                const DWORD curTid = GetCurrentThreadId();
-                if (fgTid && gameTid)
-                {
-                    AttachThreadInput(curTid, fgTid, TRUE);
-                    AttachThreadInput(curTid, gameTid, TRUE);
-                    SetForegroundWindow(DestWindow.hWnd);
-                    AttachThreadInput(curTid, fgTid, FALSE);
-                    AttachThreadInput(curTid, gameTid, FALSE);
-                }
             }
         }
         return true;
