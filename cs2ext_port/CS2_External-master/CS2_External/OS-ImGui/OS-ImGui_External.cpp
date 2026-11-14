@@ -212,7 +212,7 @@ namespace OSImGui
             return false;
         }
 
-        ShowWindow(Window.hWnd, SW_SHOWDEFAULT);
+        ShowWindow(Window.hWnd, SW_SHOWNOACTIVATE);
         UpdateWindow(Window.hWnd);
 
         return Window.hWnd != NULL;
@@ -235,7 +235,7 @@ namespace OSImGui
         Window.Pos = DestWindow.Pos = Vec2(static_cast<float>(Point.x), static_cast<float>(Point.y));
         Window.Size = DestWindow.Size = Vec2(static_cast<float>(Rect.right), static_cast<float>(Rect.bottom));
 
-        SetWindowPos(Window.hWnd, HWND_TOPMOST, (int)Window.Pos.x, (int)Window.Pos.y, (int)Window.Size.x, (int)Window.Size.y, SWP_SHOWWINDOW);
+        SetWindowPos(Window.hWnd, HWND_TOPMOST, (int)Window.Pos.x, (int)Window.Pos.y, (int)Window.Size.x, (int)Window.Size.y, SWP_SHOWWINDOW | SWP_NOACTIVATE);
 
         //                                 
         POINT MousePos;
