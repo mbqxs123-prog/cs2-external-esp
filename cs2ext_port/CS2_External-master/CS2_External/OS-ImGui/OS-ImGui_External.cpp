@@ -294,6 +294,21 @@ namespace OSImGui
             if ((wParam & 0xfff0) == SC_KEYMENU)
                 return 0;
             break;
+        case WM_SETCURSOR:
+            // The overlay sits above the game, so the OS shows the arrow cursor
+            // on top of it even though the game has hidden its own. Hide it here
+            // whenever the menu is closed; with the menu open, ImGui's own
+            // cursor handling (above) has already taken over.
+            if (!MenuConfig::ShowMenu)
+            {
+                SetCursor(NULL);
+                return TRUE;
+            }
+            break;
+        case WM_MOUSEACTIVATE:
+            // Never steal activation from the game: focus stays with CS2, the
+            // overlay just renders on top and passes clicks through.
+            return MA_NOACTIVATE;
         case WM_DESTROY:
             ::PostQuitMessage(0);
             return 0;
